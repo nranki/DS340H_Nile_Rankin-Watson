@@ -1,6 +1,8 @@
 #Opening the cleaned dataset
 bike24 <- read.csv("/cloud/project/finalbike24.csv")
 
+table(bike24$rideable_type)
+
 head(bike24)
 
 class(bike24$date)
@@ -43,6 +45,7 @@ head(bike24)
 names(bike24)
 
 #creating a new full datset without the multicollinearity functions but with the categorical variables.
+#The columns taken out are duplicates of longitude and latitude. No unique column has multicollinearity.
 #Also removing the NA-filled 'mont' variable
 goodbike <- bike24[,c(-9, -10, -11, -12, -19),]
 head(goodbike)
@@ -121,6 +124,94 @@ aic <- step(bikeglm, k=2) #aic = 10941.62
        
        #Summarizing the tree
        summary(biketree2)
+       
+       #Creating a list of different thresholds ranging from 0.05 to 0.5
+       threshold <- seq(from=0.05, to=0.5, by =0.05)
+       
+       #Creating empty lists to contain each sensitivity and specificity value for each threshold
+       sensy <- rep(NA, 10)
+       specy <- rep(NA, 10)
+       
+       #Calculating the sensitivity and specificity for each threshold for aic
+       for (i in 1:length(threshold)) {
+         pi.hat<-predict(aic, bikevalidate, type="response")
+         Y.hat4 <- ifelse(pi.hat>threshold[i],"electric","classic")
+         print(threshold[i])
+         oke <- table(bikevalidate$rideable_type,Y.hat4) #confusion matrix
+         print(oke)
+         sensy[i] <- oke[2,2]/(oke[2,1]+oke[2,2])
+         specy[i] <- oke[1,1]/(oke[1,1]+oke[1,2])
+       }
+       
+       par(mfrow = c(1, 1))
+       
+       #Creating a line chart depicting sensitivity and specificity for each threshold for aic
+       plot(threshold,sensy, type="b", col="blue", lwd=5, pch=17, xlab="Threshold", ylab="Value", ylim=range(specy,sensy))
+       lines(threshold, specy, type="b", col="turquoise", lwd=2, pch=9)
+       legend(0.05, .57, c("Sensitivity","Specificity"), lwd=c(2,2), col=c("blue","turquoise"), y.intersp=1.5)
+       title("Sensitivity and Specificity for Various Thresholds AIC")
+       
+       #Repeating the same for the bic model
+       sensy
+       threshold
+       
+       sensy2 <- rep(NA, 10)
+       specy2 <- rep(NA, 10)
+       
+       for (i in 1:length(threshold)) {
+         pi.hat5<-predict(bic, bikevalidate, type="response")
+         Y.hat5 <- ifelse(pi.hat5>threshold[i],"electric","classic")
+         print(threshold[i])
+         oke <- table(bikevalidate$rideable_type,Y.hat4) #confusion matrix
+         print(oke)
+         sensy2[i] <- oke[2,2]/(oke[2,1]+oke[2,2])
+         specy2[i] <- oke[1,1]/(oke[1,1]+oke[1,2])
+       }
+       
+       par(mfrow = c(1, 1))
+       
+       plot(threshold,sensy, type="b", col="blue", lwd=5, pch=17, xlab="Threshold", ylab="Value", ylim=range(specy,sensy))
+       lines(threshold, specy, type="b", col="turquoise", lwd=2, pch=9)
+       legend(0.05, .57, c("Sensitivity","Specificity"), lwd=c(2,2), col=c("blue","turquoise"), y.intersp=1.5)
+       title("Sensitivity and Specificity for Various Thresholds BIC")
+       
+       #Creating a list of different thresholds ranging from 0.05 to 0.5
+       threshold <- seq(from=0.05, to=0.5, by =0.05)
+       
+       #Creating empty lists to contain each sensitivity and specificity value for each threshold
+       sensy3 <- rep(NA, 10)
+       specy3 <- rep(NA, 10)
+       
+       #Calculating the sensitivity and specificity for each threshold for tree
+  
+       
+       for (i in 1:length(threshold)) {
+         # Predict classes
+         pi.hat3 <- predict(biketree2, bikevalidate, type = "class")
+         
+         # Confusion matrix
+         oke <- table(bikevalidate$rideable_type, pi.hat3)
+         print(oke)
+         
+         # Sensitivity and specificity
+         sensy3[i] <- oke["electric_bike", "electric_bike"] / 
+           (oke["electric_bike", "electric_bike"] + oke["electric_bike", "classic_bike"])
+         
+         specy3[i] <- oke["classic_bike", "classic_bike"] / 
+           (oke["classic_bike", "classic_bike"] + oke["classic_bike", "electric_bike"])
+         
+         print(threshold[i])
+       }
+    
+       
+       par(mfrow = c(1, 1))
+       
+       #Creating a line chart depicting sensitivity and specificity for each threshold for tree
+ plot(threshold,sensy3, type="b", col="blue", lwd=5, pch=17, xlab="Threshold", ylab="Value", ylim=range(specy3,sensy3))
+  lines(threshold, specy3, type="b", col="turquoise", lwd=2, pch=9)
+  legend(0.05, .57, c("Sensitivity","Specificity"), lwd=c(2,2), col=c("blue","turquoise"), y.intersp=1.5)
+ title("Sensitivity and Specificity for Various Thresholds Tree")
+       #All thresholds seem to perform the same
        
        #Looking at its performance
        #Creating a confusion matrix for the tree model
@@ -236,7 +327,7 @@ aic <- step(bikeglm, k=2) #aic = 10941.62
        plot(threshold,sensy, type="b", col="blue", lwd=5, pch=17, xlab="Threshold", ylab="Value", ylim=range(specy,sensy))
        lines(threshold, specy, type="b", col="turquoise", lwd=2, pch=9)
        legend(0.05, .57, c("Sensitivity","Specificity"), lwd=c(2,2), col=c("blue","turquoise"), y.intersp=1.5)
-       title("Sensitivity and Specificity for Various Thresholds AIC and BIC")
+       title("Sensitivity and Specificity for Various Thresholds BIC")
        
        
        #Creating a residual vs fitted plot
